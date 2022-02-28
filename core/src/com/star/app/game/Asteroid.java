@@ -31,7 +31,7 @@ public class Asteroid implements Poolable {
 
     public Asteroid(int weight) {
         this.weight = weight;
-        sizeFactor = (float)weight / MAX_WEIGHT;
+        sizeFactor = (float) weight / MAX_WEIGHT;
 
         texture = new Texture("asteroid.png");
         imgHeight = texture.getHeight();
@@ -90,7 +90,7 @@ public class Asteroid implements Poolable {
             position.y = ScreenManager.SCREEN_HEIGHT + height / 2;
         }
 
-        rotAngle = (rotAngle - 2.5f * (0.1f + sizeFactor -1)) % 360;
+        rotAngle = (rotAngle - 2.5f * (0.1f + sizeFactor - 1)) % 360;
         hitArea.setPosition(position);
     }
 
@@ -100,22 +100,22 @@ public class Asteroid implements Poolable {
             case 0: // LEFT
                 position.x = -width / 2;
                 position.y = MathUtils.random(0, ScreenManager.SCREEN_HEIGHT);
-                dirAngle = (float)MathUtils.random(-70, 70);
+                dirAngle = (float) MathUtils.random(-70, 70);
                 break;
             case 1: // TOP
                 position.x = MathUtils.random(0, ScreenManager.SCREEN_WIDTH);
                 position.y = ScreenManager.SCREEN_HEIGHT + height / 2;
-                dirAngle = (float)MathUtils.random(200, 340);
+                dirAngle = (float) MathUtils.random(200, 340);
                 break;
             case 2: // RIGHT
                 position.x = ScreenManager.SCREEN_WIDTH + width / 2;
                 position.y = MathUtils.random(0, ScreenManager.SCREEN_HEIGHT);
-                dirAngle = (float)MathUtils.random(110, 250);
+                dirAngle = (float) MathUtils.random(110, 250);
                 break;
             case 3: // BOTTOM
                 position.x = MathUtils.random(0, ScreenManager.SCREEN_WIDTH);
                 position.y = -height / 2;
-                dirAngle = (float)MathUtils.random(20, 160);
+                dirAngle = (float) MathUtils.random(20, 160);
                 break;
             default:
                 break;

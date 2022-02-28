@@ -1,6 +1,5 @@
 package com.star.app.game;
 
-
 public class GameController {
     private Background background;
     private BulletController bulletController;
@@ -49,6 +48,13 @@ public class GameController {
                     asteroid.deactivate();
                     break;
                 }
+
+            if (asteroid.isDamage(b.getPosition())) {
+                b.deactivate();
+                asteroid.deactivate();
+                break;
+            }
+
             }
         }
     }
