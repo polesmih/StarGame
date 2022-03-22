@@ -2,8 +2,6 @@ package com.star.app.game;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.star.app.game.things.Thing;
-import com.star.app.game.things.ThingsController;
 import com.star.app.screen.ScreenManager;
 
 public class GameController {
@@ -11,12 +9,12 @@ public class GameController {
     private BulletController bulletController;
     private AsteroidController asteroidController;
     private ParticleController particleController;
-    private ThingsController thingsController;
+    private PowerUpsController powerUpsController;
     private Hero hero;
     private Vector2 tempVec;
 
-    public ThingsController thingsController() {
-        return thingsController;
+    public PowerUpsController getPowerUpsController() {
+        return powerUpsController;
     }
 
     public ParticleController getParticleController() {
@@ -44,7 +42,7 @@ public class GameController {
         this.bulletController = new BulletController(this);
         this.asteroidController = new AsteroidController(this);
         this.particleController = new ParticleController();
-        this.thingsController = new ThingsController(this);
+        this.powerUpsController = new PowerUpsController(this);
         this.hero = new Hero(this);
         this.tempVec = new Vector2();
 
@@ -60,9 +58,13 @@ public class GameController {
         bulletController.update(dt);
         asteroidController.update(dt);
         particleController.update(dt);
-        thingsController.update(dt);
+        powerUpsController.update(dt);
         hero.update(dt);
         checkCollisions();
+
+        if (!hero.isAlive()) {
+            ScreenManager.getInstance().changeScreen(ScreenManager.ScreenType.GAMEOVER);
+        }
     }
 
 
@@ -102,20 +104,24 @@ public class GameController {
                             0.0f, 0.1f, 1.0f, 0.0f);
 
                     b.deactivate();
-                    if (a.takeDamage(1)) {
+                    if (a.takeDamage(hero.getCurrentWeapon().getDamage())) {
                         hero.addScore(a.getHpMax() * 100);
+                        for (int k = 0; k < 3; k++) {
+                            powerUpsController.setup(a.getPosition().x, a.getPosition().y, a.getScale() * 0.25f );
+                        }
                     }
                     break;
                 }
             }
         }
 
-        //подбираем выпадающие предметы
-        for (int i = 0; i < thingsController.getActiveList().size(); i++) {
-            Thing thing = thingsController.getActiveList().get(i);
-            if (hero.getHitArea().overlaps(thing.getHitArea())) {
-                thing.interact(hero);
-                thing.deactivate();
+        // Столкновение поверапсов и героя
+        for (int i = 0; i < powerUpsController.getActiveList().size(); i++) {
+            PowerUp pu = powerUpsController.getActiveList().get(i);
+            if (hero.getHitArea().contains(pu.getPosition())) {
+                hero.consume(pu);
+                particleController.getEffectBuilder().takePowerUpsEffect(pu);
+                pu.deactivate();
             }
         }
     }

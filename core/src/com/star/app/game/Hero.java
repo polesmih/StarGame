@@ -12,7 +12,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.star.app.screen.ScreenManager;
 import com.star.app.screen.utils.Assets;
 
-public class Hero implements PickUp {
+public class Hero {
     private GameController gc;
     private TextureRegion texture;
     private Vector2 position;
@@ -27,6 +27,11 @@ public class Hero implements PickUp {
     private StringBuilder sb;
     private Circle hitArea;
     private Weapon currentWeapon;
+    private int money;
+
+    public Weapon getCurrentWeapon() {
+        return currentWeapon;
+    }
 
     public Circle getHitArea() {
         return hitArea;
@@ -59,12 +64,13 @@ public class Hero implements PickUp {
         this.hp = hpMax;
         this.sb = new StringBuilder();
         this.hitArea = new Circle(position, 28);
+        this.money = 0;
 
-        this.currentWeapon = new Weapon(gc, this, 0.2f, 1, 700, 100,
+        this.currentWeapon = new Weapon(gc, this,0.2f,1, 700, 100,
                 new Vector3[]{
-                        new Vector3(28, 0, 0),
-                        new Vector3(28, -90, -10),
-                        new Vector3(28, 90, 10),
+                        new Vector3(28, 0,0),
+                        new Vector3(28, -90,-10),
+                        new Vector3(28, 90,10),
                 });
     }
 
@@ -76,11 +82,26 @@ public class Hero implements PickUp {
         hp -= amount;
     }
 
+    public void consume(PowerUp p){
+        switch (p.getType()){
+            case MEDKIT:
+                hp += p.getPower();
+                break;
+            case AMMOS:
+                currentWeapon.addAmmos(p.getPower());
+                break;
+            case MONEY:
+                money += p.getPower();
+                break;
+        }
+    }
+
     public void renderGUI(SpriteBatch batch, BitmapFont font) {
         sb.setLength(0);
         sb.append("SCORE: ").append(scoreView).append("\n");
         sb.append("HP: ").append(hp).append("/").append(hpMax).append("\n");
         sb.append("BULLETS: ").append(currentWeapon.getCurBullets()).append("/").append(currentWeapon.getMaxBullets()).append("\n");
+        sb.append("MONEY: ").append(money).append("\n");
         font.draw(batch, sb, 20, 700);
     }
 
@@ -106,117 +127,95 @@ public class Hero implements PickUp {
             velocity.x += MathUtils.cosDeg(angle) * enginePower * dt;
             velocity.y += MathUtils.sinDeg(angle) * enginePower * dt;
 
-        } if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-                velocity.x += MathUtils.cosDeg(angle) * -enginePower * dt;
-                velocity.y += MathUtils.sinDeg(angle) * -enginePower * dt;
+            float bx = position.x + MathUtils.cosDeg(angle + 180) * 25;
+            float by = position.y + MathUtils.sinDeg(angle + 180) * 25;
 
-
-                float bx = position.x + MathUtils.cosDeg(angle + 180) * 25;
-                float by = position.y + MathUtils.sinDeg(angle + 180) * 25;
-
-                for (int i = 0; i < 3; i++) {
-                    gc.getParticleController().setup(bx + MathUtils.random(-4, 4), by + MathUtils.random(-4, 4),
-                            velocity.x * -0.1f + MathUtils.random(-20, 20), velocity.y * -0.1f + MathUtils.random(-20, 20),
-                            0.4f,
-                            1.2f, 0.2f,
-                            1.0f, 0.5f, 0.0f, 1.0f,
-                            1.0f, 1.0f, 1.0f, 0.0f);
-                }
-            }
-
-            if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-                velocity.x += MathUtils.cosDeg(angle) * enginePower * -0.5f * dt;
-                velocity.y += MathUtils.sinDeg(angle) * enginePower * -0.5f * dt;
-
-                float bx = position.x + MathUtils.cosDeg(angle - 90) * 25;
-                float by = position.y + MathUtils.sinDeg(angle - 90) * 25;
-
-                for (int i = 0; i < 3; i++) {
-                    gc.getParticleController().setup(bx + MathUtils.random(-4, 4), by + MathUtils.random(-4, 4),
-                            velocity.x * 0.1f + MathUtils.random(-20, 20), velocity.y * 0.1f + MathUtils.random(-20, 20),
-                            0.2f,
-                            1.2f, 0.2f,
-                            1.0f, 0.5f, 0.0f, 1.0f,
-                            1.0f, 1.0f, 1.0f, 0.0f);
-                }
-
-                bx = position.x + MathUtils.cosDeg(angle + 90) * 25;
-                by = position.y + MathUtils.sinDeg(angle + 90) * 25;
-
-                for (int i = 0; i < 3; i++) {
-                    gc.getParticleController().setup(bx + MathUtils.random(-4, 4), by + MathUtils.random(-4, 4),
-                            velocity.x * 0.1f + MathUtils.random(-20, 20), velocity.y * 0.1f + MathUtils.random(-20, 20),
-                            0.2f,
-                            1.2f, 0.2f,
-                            1.0f, 0.5f, 0.0f, 1.0f,
-                            1.0f, 1.0f, 1.0f, 0.0f);
-                }
-
-            }
-            position.mulAdd(velocity, dt);
-            hitArea.setPosition(position);
-            float stopKoef = 1.0f - dt;
-            if (stopKoef < 0.0f) {
-                stopKoef = 0.0f;
-            }
-            velocity.scl(stopKoef);
-
-            checkBorders();
-        }
-
-        private void updateScore (float dt){
-            if (scoreView < score) {
-                scoreView += 1500 * dt;
-                if (scoreView > score) {
-                    scoreView = score;
-                }
+            for (int i = 0; i < 3; i++) {
+                gc.getParticleController().setup(bx + MathUtils.random(-4, 4), by + MathUtils.random(-4, 4),
+                        velocity.x * -0.1f + MathUtils.random(-20, 20), velocity.y * -0.1f + MathUtils.random(-20, 20),
+                        0.4f,
+                        1.2f, 0.2f,
+                        1.0f, 0.5f, 0.0f, 1.0f,
+                        1.0f, 1.0f, 1.0f, 0.0f);
             }
         }
 
-        private void tryToFire () {
-            if (fireTimer > 0.2) {
-                fireTimer = 0.0f;
-                currentWeapon.fire();
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+            velocity.x += MathUtils.cosDeg(angle) * enginePower * -0.5f * dt;
+            velocity.y += MathUtils.sinDeg(angle) * enginePower * -0.5f * dt;
+
+            float bx = position.x + MathUtils.cosDeg(angle - 90) * 25;
+            float by = position.y + MathUtils.sinDeg(angle - 90) * 25;
+
+            for (int i = 0; i < 3; i++) {
+                gc.getParticleController().setup(bx + MathUtils.random(-4, 4), by + MathUtils.random(-4, 4),
+                        velocity.x * 0.1f + MathUtils.random(-20, 20), velocity.y * 0.1f + MathUtils.random(-20, 20),
+                        0.2f,
+                        1.2f, 0.2f,
+                        1.0f, 0.5f, 0.0f, 1.0f,
+                        1.0f, 1.0f, 1.0f, 0.0f);
             }
+
+            bx = position.x + MathUtils.cosDeg(angle + 90) * 25;
+            by = position.y + MathUtils.sinDeg(angle + 90) * 25;
+
+            for (int i = 0; i < 3; i++) {
+                gc.getParticleController().setup(bx + MathUtils.random(-4, 4), by + MathUtils.random(-4, 4),
+                        velocity.x * 0.1f + MathUtils.random(-20, 20), velocity.y * 0.1f + MathUtils.random(-20, 20),
+                        0.2f,
+                        1.2f, 0.2f,
+                        1.0f, 0.5f, 0.0f, 1.0f,
+                        1.0f, 1.0f, 1.0f, 0.0f);
+            }
+
         }
-
-        private void checkBorders () {
-            if (position.x < 32) {
-                position.x = 32f;
-                velocity.x *= -0.5f;
-            }
-            if (position.x > ScreenManager.SCREEN_WIDTH - 32) {
-                position.x = ScreenManager.SCREEN_WIDTH - 32f;
-                velocity.x *= -0.5f;
-            }
-            if (position.y < 32) {
-                position.y = 32f;
-                velocity.y *= -0.5f;
-            }
-            if (position.y > ScreenManager.SCREEN_HEIGHT - 32) {
-                position.y = ScreenManager.SCREEN_HEIGHT - 32f;
-                velocity.y *= -0.5f;
-            }
+        position.mulAdd(velocity, dt);
+        hitArea.setPosition(position);
+        float stopKoef = 1.0f - dt;
+        if (stopKoef < 0.0f) {
+            stopKoef = 0.0f;
         }
+        velocity.scl(stopKoef);
 
-    @Override
-    public void addAmmunition(int amount) {
-
-
+        checkBorders();
     }
 
-    @Override
-    public void takeCoins(int amount) {
-
+    private void updateScore(float dt) {
+        if (scoreView < score) {
+            scoreView += 1500 * dt;
+            if (scoreView > score) {
+                scoreView = score;
+            }
+        }
     }
 
-    @Override
-    public void medication(int amount) {
+    private void tryToFire() {
+        if (fireTimer > 0.2) {
+            fireTimer = 0.0f;
+            currentWeapon.fire();
+        }
+    }
 
+    public void checkBorders() {
+        if (position.x < 32) {
+            position.x = 32f;
+            velocity.x *= -0.5f;
+        }
+        if (position.x > ScreenManager.SCREEN_WIDTH - 32) {
+            position.x = ScreenManager.SCREEN_WIDTH - 32f;
+            velocity.x *= -0.5f;
+        }
+        if (position.y < 32) {
+            position.y = 32f;
+            velocity.y *= -0.5f;
+        }
+        if (position.y > ScreenManager.SCREEN_HEIGHT - 32) {
+            position.y = ScreenManager.SCREEN_HEIGHT - 32f;
+            velocity.y *= -0.5f;
+        }
+    }
+
+    public boolean isAlive() {
+        return hp > 0;
     }
 }
-
-
-
-
-
