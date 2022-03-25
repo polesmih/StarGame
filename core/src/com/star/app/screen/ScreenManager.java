@@ -44,7 +44,7 @@ public class ScreenManager {
         this.game = game;
         this.batch = batch;
         this.viewport = new FitViewport(SCREEN_WIDTH, SCREEN_HEIGHT);
-        this.gameScreen = new GameScreen(batch, game);
+        this.gameScreen = new GameScreen(batch);
         this.menuScreen = new MenuScreen(batch);
         this.gameOverScreen = new GameOverScreen(batch);
         this.loadingScreen = new LoadingScreen(batch);
@@ -74,7 +74,7 @@ public class ScreenManager {
                 break;
             case GAMEOVER:
                 targetScreen = gameOverScreen;
-                gameOverScreen.setDeadHero((Hero) args[0]);
+                gameOverScreen.setDefeatedHero((Hero) args[0]);
                 Assets.getInstance().loadAssets(ScreenType.GAMEOVER);
                 break;
         }

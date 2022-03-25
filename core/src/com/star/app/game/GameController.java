@@ -1,7 +1,10 @@
 package com.star.app.game;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.star.app.screen.ScreenManager;
 
 public class GameController {
@@ -12,6 +15,12 @@ public class GameController {
     private PowerUpsController powerUpsController;
     private Hero hero;
     private Vector2 tempVec;
+    private Stage stage;
+    private static final float ATTRACT_DISTANCE = 100f;
+
+    public Stage getStage() {
+        return stage;
+    }
 
     public PowerUpsController getPowerUpsController() {
         return powerUpsController;
@@ -37,7 +46,7 @@ public class GameController {
         return hero;
     }
 
-    public GameController() {
+    public GameController(SpriteBatch batch) {
         this.background = new Background(this);
         this.bulletController = new BulletController(this);
         this.asteroidController = new AsteroidController(this);
@@ -45,6 +54,10 @@ public class GameController {
         this.powerUpsController = new PowerUpsController(this);
         this.hero = new Hero(this);
         this.tempVec = new Vector2();
+        this.stage = new Stage(ScreenManager.getInstance().getViewport(), batch);
+        this.stage.addActor(hero.getShop());
+
+        Gdx.input.setInputProcessor(stage);
 
         for (int i = 0; i < 3; i++) {
             asteroidController.setup(MathUtils.random(0, ScreenManager.SCREEN_WIDTH),
@@ -60,10 +73,10 @@ public class GameController {
         particleController.update(dt);
         powerUpsController.update(dt);
         hero.update(dt);
+        stage.act(dt);
         checkCollisions();
-
-        if (!hero.isAlive()) {
-            ScreenManager.getInstance().changeScreen(ScreenManager.ScreenType.GAMEOVER);
+        if(!hero.isAlive()){
+            ScreenManager.getInstance().changeScreen(ScreenManager.ScreenType.GAMEOVER, hero);
         }
     }
 
@@ -118,11 +131,24 @@ public class GameController {
         // Столкновение поверапсов и героя
         for (int i = 0; i < powerUpsController.getActiveList().size(); i++) {
             PowerUp pu = powerUpsController.getActiveList().get(i);
+
+            // приближение поверпасов
+            if (hero.getAttractArea().contains(pu.getPosition())) {
+                tempVec.set(hero.getPosition().sub(pu.getPosition().nor()));
+                pu.getPosition().mulAdd(tempVec, ATTRACT_DISTANCE);
+
+            }
+
+            // поглощение поверпаса
             if (hero.getHitArea().contains(pu.getPosition())) {
                 hero.consume(pu);
                 particleController.getEffectBuilder().takePowerUpsEffect(pu);
                 pu.deactivate();
             }
         }
+    }
+
+    public void dispose(){
+        background.dispose();
     }
 }

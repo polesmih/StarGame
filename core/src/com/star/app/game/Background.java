@@ -7,8 +7,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.star.app.screen.utils.Assets;
 
-import static com.star.app.screen.ScreenManager.SCREEN_HEIGHT;
-import static com.star.app.screen.ScreenManager.SCREEN_WIDTH;
+import static com.star.app.screen.ScreenManager.*;
 
 public class Background {
     private class Star {
@@ -24,8 +23,12 @@ public class Background {
         }
 
         public void update(float dt) {
-            position.x += (velocity.x - gc.getHero().getVelocity().x * 0.1f) * dt;
-            position.y += (velocity.y - gc.getHero().getVelocity().y * 0.1f) * dt;
+            if (gc != null) {
+                position.x += (velocity.x - gc.getHero().getVelocity().x * 0.1f) * dt;
+                position.y += (velocity.y - gc.getHero().getVelocity().y * 0.1f) * dt;
+            } else {
+                position.mulAdd(velocity, dt);
+            }
 
             if (position.x < -200) {
                 position.x = SCREEN_WIDTH + 200;

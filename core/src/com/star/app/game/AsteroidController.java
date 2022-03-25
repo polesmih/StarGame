@@ -1,29 +1,29 @@
 package com.star.app.game;
 
-
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.MathUtils;
 import com.star.app.game.helpers.ObjectPool;
 
 public class AsteroidController extends ObjectPool<Asteroid> {
-
-    private static final int ASTEROIDS_COUNT = 2;
+    private GameController gc;
 
     @Override
     protected Asteroid newObject() {
-        return new Asteroid(MathUtils.random(5, 10));
+        return new Asteroid(gc);
     }
 
-    public AsteroidController() {
-        for (int i = 0; i < ASTEROIDS_COUNT; i++) {
-            getActiveElement().activate(0f,0f,0f,0f);
-        }
+    public AsteroidController(GameController gc) {
+        this.gc = gc;
     }
 
     public void render(SpriteBatch batch) {
         for (int i = 0; i < activeList.size(); i++) {
-            ((Asteroid)activeList.get(i)).render(batch);
+            Asteroid a = activeList.get(i);
+            a.render(batch);
         }
+    }
+
+    public void setup(float x, float y, float vx, float vy, float scale){
+        getActiveElement().activate(x, y, vx, vy, scale);
     }
 
     public void update(float dt) {
