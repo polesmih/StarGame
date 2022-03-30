@@ -2,19 +2,17 @@ package com.star.app.game;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
-import com.star.app.screen.ScreenManager;
 import com.star.app.screen.utils.Assets;
 
-public class Hero {
+public class Hero extends Ship {
     public enum Skill {
-        HP_MAX(20), HP(20), WEAPON(100), ATTRACT(100);
+        HP_MAX(20), HP(20), WEAPON(100), MAGNET(50);
 
         int cost;
 
@@ -23,36 +21,19 @@ public class Hero {
         }
     }
 
-    private GameController gc;
-    private TextureRegion texture;
-    private Vector2 position;
-    private Vector2 velocity;
-    private float angle;
-    private float enginePower;
-    private float fireTimer;
     private int score;
     private int scoreView;
-    private int hp;
-    private int hpMax;
     private StringBuilder sb;
-    private Circle hitArea;
-    private Weapon currentWeapon;
     private int money;
     private Shop shop;
-    private Weapon[] weapons;
-    private int weaponNum;
-    private Circle attractArea;
+    private Circle magneticField;
+
+    public Circle getMagneticField() {
+        return magneticField;
+    }
 
     public Shop getShop() {
         return shop;
-    }
-
-    public Weapon getCurrentWeapon() {
-        return currentWeapon;
-    }
-
-    public Circle getHitArea() {
-        return hitArea;
     }
 
     public int getScore() {
@@ -71,65 +52,48 @@ public class Hero {
         money -= amount;
     }
 
-    public Vector2 getPosition() {
-        return position;
+    public void setPause(boolean pause) {
+        gc.setPause(pause);
     }
-
-    public Vector2 getVelocity() {
-        return velocity;
-    }
-
-    public float getAngle() {
-        return angle;
-    }
-
-    public boolean isAlive() {
-        return hp > 0;
-    }
-
-    public Circle getAttractArea() {
-        return attractArea;
-    }
-
 
     public Hero(GameController gc) {
-        this.gc = gc;
+        super(gc,700, 100);
         this.texture = Assets.getInstance().getAtlas().findRegion("ship");
         this.position = new Vector2(640, 360);
-        this.velocity = new Vector2(0, 0);
-        this.angle = 0.0f;
-        this.enginePower = 700.0f;
-        this.hpMax = 100;
-        this.hp = hpMax;
-        this.sb = new StringBuilder();
         this.hitArea = new Circle(position, 28);
+
+        this.magneticField = new Circle(position, 50);
         this.money = 1000;
         this.shop = new Shop(this);
-        createWeapons();
-        this.weaponNum = 0;
-        this.currentWeapon = weapons[weaponNum];
-        this.attractArea = new Circle(position, 100);
-
+        this.sb = new StringBuilder();
+        this.ownerType = OwnerType.PLAYER;
     }
 
     public void addScore(int amount) {
         score += amount;
     }
 
-    public void takeDamage(int amount) {
-        hp -= amount;
-    }
-
     public void consume(PowerUp p) {
+        sb.setLength(0);
         switch (p.getType()) {
             case MEDKIT:
+                int oldHP = hp;
                 hp += p.getPower();
+                if (hp > hpMax) {
+                    hp = hpMax;
+                }
+                sb.append("HP +").append(hp - oldHP);
+                gc.getInfoController().setup(p.getPosition().x, p.getPosition().y, sb,Color.GREEN );
                 break;
             case AMMOS:
-                currentWeapon.addAmmos(p.getPower());
+                int count = currentWeapon.addAmmos(p.getPower());
+                sb.append("AMMOS +").append(count);
+                gc.getInfoController().setup(p.getPosition().x, p.getPosition().y, sb,Color.RED );
                 break;
             case MONEY:
                 money += p.getPower();
+                sb.append("MONEY +").append(p.getPower());
+                gc.getInfoController().setup(p.getPosition().x, p.getPosition().y, sb,Color.YELLOW );
                 break;
         }
     }
@@ -147,18 +111,22 @@ public class Hero {
                     }
                     return true;
                 }
-            return false;
+                return false;
             case WEAPON:
                 if (weaponNum < weapons.length - 1) {
                     weaponNum++;
                     currentWeapon = weapons[weaponNum];
                     return true;
                 }
-            case ATTRACT:
-                attractArea.radius += 10;
+                return false;
+            case MAGNET:
+                if (magneticField.radius < 500) {
+                    magneticField.radius += 10;
                     return true;
                 }
-            return false;
+                return false;
+        }
+        return false;
     }
 
     public void renderGUI(SpriteBatch batch, BitmapFont font) {
@@ -167,6 +135,8 @@ public class Hero {
         sb.append("HP: ").append(hp).append("/").append(hpMax).append("\n");
         sb.append("BULLETS: ").append(currentWeapon.getCurBullets()).append("/").append(currentWeapon.getMaxBullets()).append("\n");
         sb.append("MONEY: ").append(money).append("\n");
+        sb.append("MAGNETIC: ").append((int) magneticField.radius).append("\n");
+        sb.append("TIMER: ").append((int) gc.getTimer()).append("\n");
         font.draw(batch, sb, 20, 700);
     }
 
@@ -176,12 +146,12 @@ public class Hero {
     }
 
     public void update(float dt) {
-        fireTimer += dt;
+        super.update(dt);
         updateScore(dt);
-        attractArea.setPosition(position);
 
         if (Gdx.input.isKeyPressed(Input.Keys.P)) {
             shop.setVisible(true);
+            gc.setPause(true);
         }
         if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
             tryToFire();
@@ -193,8 +163,7 @@ public class Hero {
             angle -= 180 * dt;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            velocity.x += MathUtils.cosDeg(angle) * enginePower * dt;
-            velocity.y += MathUtils.sinDeg(angle) * enginePower * dt;
+            accelerate(dt);
 
             float bx = position.x + MathUtils.cosDeg(angle + 180) * 25;
             float by = position.y + MathUtils.sinDeg(angle + 180) * 25;
@@ -210,8 +179,7 @@ public class Hero {
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            velocity.x += MathUtils.cosDeg(angle) * enginePower * -0.5f * dt;
-            velocity.y += MathUtils.sinDeg(angle) * enginePower * -0.5f * dt;
+            brake(dt);
 
             float bx = position.x + MathUtils.cosDeg(angle - 90) * 25;
             float by = position.y + MathUtils.sinDeg(angle - 90) * 25;
@@ -236,17 +204,8 @@ public class Hero {
                         1.0f, 0.5f, 0.0f, 1.0f,
                         1.0f, 1.0f, 1.0f, 0.0f);
             }
-
         }
-        position.mulAdd(velocity, dt);
-        hitArea.setPosition(position);
-        float stopKoef = 1.0f - dt;
-        if (stopKoef < 0.0f) {
-            stopKoef = 0.0f;
-        }
-        velocity.scl(stopKoef);
-
-        checkBorders();
+        magneticField.setPosition(position);
     }
 
     private void updateScore(float dt) {
@@ -257,79 +216,4 @@ public class Hero {
             }
         }
     }
-
-    private void tryToFire() {
-        if (fireTimer > 0.2) {
-            fireTimer = 0.0f;
-            currentWeapon.fire();
-        }
-    }
-
-    public void checkBorders() {
-        if (position.x < 32) {
-            position.x = 32f;
-            velocity.x *= -0.5f;
-        }
-        if (position.x > ScreenManager.SCREEN_WIDTH - 32) {
-            position.x = ScreenManager.SCREEN_WIDTH - 32f;
-            velocity.x *= -0.5f;
-        }
-        if (position.y < 32) {
-            position.y = 32f;
-            velocity.y *= -0.5f;
-        }
-        if (position.y > ScreenManager.SCREEN_HEIGHT - 32) {
-            position.y = ScreenManager.SCREEN_HEIGHT - 32f;
-            velocity.y *= -0.5f;
-        }
-    }
-
-    private void createWeapons() {
-        weapons = new Weapon[]{
-                new Weapon(gc, this, 0.2f, 1, 400, 100,
-                        new Vector3[]{
-                                new Vector3(28, -90, -10),
-                                new Vector3(28, 90, 10),
-                        }),
-                new Weapon(gc, this, 0.2f, 1, 500, 200,
-                        new Vector3[]{
-                                new Vector3(28, 0, 0),
-                                new Vector3(28, -90, -10),
-                                new Vector3(28, 90, 10),
-                        }),
-                new Weapon(gc, this, 0.1f, 1, 700, 500,
-                        new Vector3[]{
-                                new Vector3(28, 0, 0),
-                                new Vector3(28, -90, -10),
-                                new Vector3(28, 90, 10),
-                        }),
-                new Weapon(gc, this, 0.1f, 1, 700, 800,
-                        new Vector3[]{
-                                new Vector3(28, 0, 0),
-                                new Vector3(28, -90, -10),
-                                new Vector3(28, -90, -20),
-                                new Vector3(28, 90, 10),
-                                new Vector3(28, 90, 20),
-                        }),
-                new Weapon(gc, this, 0.1f, 2, 700, 1000,
-                        new Vector3[]{
-                                new Vector3(28, 0, 0),
-                                new Vector3(28, -90, -10),
-                                new Vector3(28, -90, -20),
-                                new Vector3(28, 90, 10),
-                                new Vector3(28, 90, 20),
-                        }),
-                new Weapon(gc, this, 0.2f, 10, 700, 1000,
-                        new Vector3[]{
-                                new Vector3(28, 0, 0),
-                                new Vector3(28, -90, -10),
-                                new Vector3(28, -90, -20),
-                                new Vector3(28, -90, -30),
-                                new Vector3(28, 90, 10),
-                                new Vector3(28, 90, 20),
-                                new Vector3(28, 90, 30),
-                        })
-        };
-    }
-
-    }
+}
