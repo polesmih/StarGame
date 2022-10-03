@@ -1,1 +1,1 @@
-# Приложение - игра Space shooter (стрелялка)
+# Application - game Space shooter (shooting game)
